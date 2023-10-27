@@ -1,9 +1,29 @@
 use std::{
-    env::{self, current_dir},
+    env::{self},
     fs::File,
     io::Read,
     process::exit,
 };
+
+/// # Examples
+/// ```
+/// assert_eq!(2, count_trailing_spaces("  hi"));
+/// assert_eq!(0, count_trailing_spaces("hi"));
+/// assert_eq!(4, count_trailing_spaces("    hello world!"));
+/// ```
+fn count_trailing_spaces(string: &str) -> usize {
+    let mut spaces: usize = 0;
+
+    for character in string.chars() {
+        if character == ' ' {
+            spaces += 1;
+        } else {
+            return spaces;
+        }
+    }
+
+    spaces
+}
 
 fn parse(contents: String) {
     // This holds all the SRC blocks, for example, if we parse the code below,
@@ -24,6 +44,12 @@ fn parse(contents: String) {
     // code of the comment above, this will be first `fn main() {` and then
     // `    println!("Hello world!");\n}`
     let mut current_src = String::new();
+
+    // These are used for...
+    let mut lowest_space_level = 0; // ... counting how much trailing spaces we need to remove
+    let mut is_first_src = true; // ... this is needed because we need to set `lowest_space_level`
+                                 // to the first line of the first src, otherwise, if it
+                                 // was just 0, we would remove 0 characters, doing nothing
 
     let mut is_src = false; // used to keep track wheter or not we are in an SRC block
     let mut i = 1; // used to keep track of the current line if any error comes up
@@ -57,6 +83,13 @@ fn parse(contents: String) {
         }
 
         if is_src {
+            if is_first_src {
+                is_first_src = false;
+                lowest_space_level = count_trailing_spaces(line);
+            } else if !line.is_empty() {
+                lowest_space_level = lowest_space_level.min(count_trailing_spaces(line));
+            }
+
             current_src.push_str(&format!("{}\n", line));
         }
 
@@ -64,7 +97,11 @@ fn parse(contents: String) {
     }
 
     for line in srcs.lines() {
-        println!("{}", line);
+        if line.len() > 2 {
+            println!("{}", &line[lowest_space_level..]);
+        } else {
+            println!("{}", line);
+        }
     }
 }
 
