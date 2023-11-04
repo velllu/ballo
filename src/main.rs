@@ -1,7 +1,8 @@
 use std::{
     env::{self},
     fs::File,
-    io::Read,
+    io::{self, Read},
+    path::Path,
     process::exit,
 };
 
@@ -105,15 +106,8 @@ fn parse(contents: String) {
     }
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() != 2 {
-        eprintln!("Usage: `tangler /path/to/file.org`");
-        exit(1);
-    }
-
-    let mut path = match File::open(&args[1]) {
+fn tangle_file(path: impl AsRef<Path>) {
+    let mut path = match File::open(path) {
         Ok(path) => path,
         Err(_) => {
             eprintln!("Couldn't find file");
@@ -128,4 +122,26 @@ fn main() {
     }
 
     parse(file_contents);
+}
+
+fn tangle_stdin() {
+    let stdin = io::stdin();
+    let mut input = String::new();
+
+    while stdin.read_line(&mut input).expect("Failed to read line") > 0 {}
+
+    parse(input);
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    match args.len() {
+        1 => tangle_stdin(),
+        2 => tangle_file(&args[1]),
+        _ => {
+            eprintln!("Usage: `ballo /path/to/file.org` or `cat file.org | ballo`");
+            exit(1);
+        }
+    }
 }
